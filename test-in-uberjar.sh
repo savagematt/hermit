@@ -1,3 +1,4 @@
+lein uberjar
 echo
 echo Hermit :out should be  \"Hello Steve\"
 echo

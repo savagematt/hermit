@@ -99,7 +99,7 @@
 
          (fs/mkdirs (fs/parent file))
 
-         (spit file (slurp (io/resource resource)))
+         (io/copy (io/input-stream (io/resource resource)) file)
 
          (when (= ".sh" (fs/extension file))
            (fs/chmod "+x" file)))))))
