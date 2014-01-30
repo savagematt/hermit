@@ -67,7 +67,7 @@
    hermit/
    =>  a seq containing hermit/hello_world.sh"
   [resource-path]
-  (let [resource-url (io/resource resource-path)]
+  (let [resource-url (io/resource (ensure-trailing-slash resource-path))]
     (when-not resource-url
       (throw (NullPointerException. (str "Resource '" resource-path "' not found"))))
 
@@ -150,7 +150,7 @@
   )
 
 (defn -main [& args]
-  (println (parent-url "hermit/hello_world.sh"))
-  (println (apply rsh! "hermit/hello_world.sh" args))
+  (with-deps [["hermit/" "bin"] "hermit"]
+    (println (apply rsh! "hermit/call_deps.sh" args)))
 
   (shutdown-agents))
