@@ -38,7 +38,6 @@
   (rsh! "hermit/test/echo_args.sh" "moo" "baa") => (contains {:out "moo baa\n"}))
 
 (fact "Calling a script which relies on code in one or more resource paths (to be extracted) works"
-
   (with-deps ["hermit/test/subdir1"]
     (rsh! "hermit/test/sub_dir.sh")) => (contains {:out "Script in subdir1\n"})
 

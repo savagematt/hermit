@@ -132,7 +132,7 @@
 (defmacro with-deps [resource-paths & body]
   `(binding [*hermit-dir* (fs/temp-dir "hermit")]
      (doseq [dependency-path# (list ~@resource-paths)]
-       (copy-resources! dependency-path# *hermit-dir*))
+       (copy-resources! dependency-path# (fs/file *hermit-dir* dependency-path#)))
      (do ~@body))
   )
 

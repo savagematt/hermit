@@ -1,1 +1,1 @@
-./sub_dir1.sh
+./hermit/test/subdir1/sub_dir1.sh
