@@ -11,6 +11,7 @@
   []
   (str (java.util.UUID/randomUUID)))
 
+(defn ensure-trailing-slash [s] (str/replace s #"[^/]$" #(str %1 "/")))
 
 (defn parent-url
   "For jar resources,  hermit/hello_world.sh => jar:file:/Path/to/jar!hermit/
@@ -63,9 +64,6 @@
 (defn list-resources-under-path
   "Given a resource path, returns all child resources within the same code source.
 
-   context-path should be a file not a package, i.e. hermit/hello_world.sh, not
-   hermit/
-
    hermit/
    =>  a seq containing hermit/hello_world.sh"
   [resource-path]
@@ -73,7 +71,7 @@
     (when-not resource-url
       (throw (NullPointerException. (str "Resource '" resource-path "' not found"))))
 
-    (map #(str (str/replace resource-path #"/$" "") "/" %)
+    (map #(str (ensure-trailing-slash resource-path) %)
          (list-resources-under-url resource-url))))
 
 
@@ -100,7 +98,7 @@
       dir))
   ([resources relative-to dir]
      (fs/mkdirs dir)
-     (let [relative-to-re (str/re-quote-replacement relative-to)]
+     (let [relative-to-re (str/re-quote-replacement (ensure-trailing-slash relative-to))]
        (doseq [resource resources]
          (let [relative-path (str/replace-first resource relative-to-re "")
                file (fs/file dir relative-path)]
@@ -111,6 +109,8 @@
 
            (when (= ".sh" (fs/extension file))
              (fs/chmod "+x" file)))))))
+
+(declare ^:dynamic *hermit-dir*)
 
 (defn rsh!
   "(rsh! \"hermit/hello_world.sh\" \"steve\")
@@ -123,11 +123,18 @@
 
    The script with be run within the context of this temp directory"
   [script-path & args]
-  (let [tmp-dir (fs/temp-dir "hermit")
-        script  (fs/file tmp-dir (script-file script-path))]
-    (copy-resources! (parent-path script-path) tmp-dir)
-    (with-sh-dir tmp-dir
+  (let [hermit-dir (if (thread-bound? #'*hermit-dir*) *hermit-dir* (fs/temp-dir "hermit"))
+        script  (fs/file hermit-dir (script-file script-path))]
+    (copy-resources! (parent-path script-path) hermit-dir)
+    (with-sh-dir hermit-dir
       (apply sh (.getAbsolutePath script) args))))
+
+(defmacro with-deps [resource-paths & body]
+  `(binding [*hermit-dir* (fs/temp-dir "hermit")]
+     (doseq [dependency-path# (list ~@resource-paths)]
+       (copy-resources! dependency-path# *hermit-dir*))
+     (do ~@body))
+  )
 
 (defn -main [& args]
   (println (parent-url "hermit/hello_world.sh"))

@@ -37,10 +37,10 @@
 (fact "Passes through args"
   (rsh! "hermit/test/echo_args.sh" "moo" "baa") => (contains {:out "moo baa\n"}))
 
-#_(fact "Calling a script which relies on code in one or more resource paths (to be extracted) works"
+(fact "Calling a script which relies on code in one or more resource paths (to be extracted) works"
 
-  (with-deps ["hermit/test/subdirectory1"]
-    (rsh! "hermit/test/sub_dir.sh")) => (contains {:out "Script in subdir 1\n"})
+  (with-deps ["hermit/test/subdir1"]
+    (rsh! "hermit/test/sub_dir.sh")) => (contains {:out "Script in subdir1\n"})
 
-  (with-deps ["hermit/test/subdirectory1" "hermit/test/subdirectory2"]
-    (rsh! "hermit/test/sub_dirs.sh")) => (contains {:out "Script in subdir 1\nScript in subdir 2\n"}))
+  (with-deps ["hermit/test/subdir1" "hermit/test/subdir2"]
+    (rsh! "hermit/test/sub_dirs.sh")) => (contains {:out "Script in subdir1\nScript in subdir2\n"}))
