@@ -32,7 +32,7 @@ If your script has dependencies at other paths, you can do this:
 
 ```clj
     (with-deps [["hermit/" "bin"] "hermit"]
-      (println (apply rsh! "hermit/call_deps.sh" args)))
+      (println (rsh! "hermit/call_deps.sh" "Dave")))
 ```
 
 Again, `call_deps.sh` is bundled with hermit so this example will work..
