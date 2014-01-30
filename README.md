@@ -10,14 +10,16 @@ Works from within the repl and within uberjars
 
 Add the following to the :dependencies section of your project.clj file:
 
+```clj
     [hermit "0.3"]
-
+```
 
 ## Usage
 
 This example will run from within any project that imports hermit:
-
+```clj
     (rsh! "hermit/hello_world.sh" "steve")
+```
 
 `hello_world.sh` is bundled with hermit.
 
@@ -28,7 +30,9 @@ The script with be run within the context of the temp directory
 
 If your script has dependencies at other paths, you can do this:
 
+```clj
     (with-deps [["hermit/" "bin"] "hermit"]
       (println (apply rsh! "hermit/call_deps.sh" args)))
+```
 
 Again, `call_deps.sh` is bundled with hermit so this example will work..
