@@ -8,7 +8,7 @@ Works from within the repl and within uberjars
 
 ## Installation
 
-Add the following to the :dependencies section of your project.clj file:
+Add the following to the `:dependencies` section of your `project.clj` file:
 
 ```clj
     [hermit "0.3"]
