@@ -25,7 +25,7 @@
       "jar"  (parent-jar-url resource-url)
       "file" (.toURL (.resolve (.toURI resource-url) ".")))))
 
-(defn base-path
+(defn parent-path
   "hermit/hello_world.sh
    => hermit/"
   [context-path]
@@ -58,14 +58,10 @@
 
    hermit/hello_world.sh
    =>  a seq containing hermit/hello_world.sh"
-  [context-path]
-  (let [url            (parent-url context-path)
-        protocol       (.getProtocol url)
-        relative-paths (case protocol
-                         "file" (list-dir-resources url)
-                         "jar"  (list-jar-resources url))
-        base-path      (base-path context-path)]
-    (map #(str base-path %) relative-paths)))
+  [url]
+  (case (.getProtocol url)
+    "file" (list-dir-resources url)
+    "jar"  (list-jar-resources url)))
 
 
 (defn copy-resources!
@@ -86,23 +82,24 @@
               Some/directory/some_other_script.sh"
 
   ([context-path dir]
-   (copy-resources!
-    (list-resources context-path)
-    (base-path context-path)
-    dir))
+     (copy-resources!
+      (map #(str (parent-path context-path) %)
+           (list-resources (parent-url context-path)))
+      (parent-path context-path)
+      dir))
   ([resources relative-to dir]
-   (fs/mkdirs dir)
-   (let [relative-to-re (str/re-quote-replacement relative-to)]
-     (doseq [resource resources]
-       (let [relative-path (str/replace-first resource relative-to-re "")
-             file (fs/file dir relative-path)]
+     (fs/mkdirs dir)
+     (let [relative-to-re (str/re-quote-replacement relative-to)]
+       (doseq [resource resources]
+         (let [relative-path (str/replace-first resource relative-to-re "")
+               file (fs/file dir relative-path)]
 
-         (fs/mkdirs (fs/parent file))
+           (fs/mkdirs (fs/parent file))
 
-         (io/copy (io/input-stream (io/resource resource)) file)
+           (io/copy (io/input-stream (io/resource resource)) file)
 
-         (when (= ".sh" (fs/extension file))
-           (fs/chmod "+x" file)))))))
+           (when (= ".sh" (fs/extension file))
+             (fs/chmod "+x" file)))))))
 
 (defn rsh!
   "(rsh! \"hermit/hello_world.sh\" \"steve\")
