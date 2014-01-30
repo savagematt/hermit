@@ -50,18 +50,31 @@
      #(str/replace-first % base-file-path "")
      (filter #(.isFile %) (file-seq base-file)))))
 
-(defn list-resources
+(defn list-resources-under-url
+  "Given a url, returns all child resources within the same code source.
+
+   jar:file:/Path/to/jar!hermit
+   =>  a seq containing hello_world.sh"
+  [url]
+  (case (.getProtocol url)
+    "file" (list-dir-resources url)
+    "jar"  (list-jar-resources url)))
+
+(defn list-resources-under-path
   "Given a resource path, returns all child resources within the same code source.
 
    context-path should be a file not a package, i.e. hermit/hello_world.sh, not
    hermit/
 
-   hermit/hello_world.sh
+   hermit/
    =>  a seq containing hermit/hello_world.sh"
-  [url]
-  (case (.getProtocol url)
-    "file" (list-dir-resources url)
-    "jar"  (list-jar-resources url)))
+  [resource-path]
+  (let [resource-url (io/resource resource-path)]
+    (when-not resource-url
+      (throw (NullPointerException. (str "Resource '" resource-path "' not found"))))
+
+    (map #(str (str/replace resource-path #"/$" "") "/" %)
+         (list-resources-under-url resource-url))))
 
 
 (defn copy-resources!
@@ -69,7 +82,7 @@
    from the resource names
 
    (copy-resources!
-     \"hermit/hello_world.sh\"
+     \"hermit\"
      \"Some/directory\")
    => creates Some/directory/hello_world.sh
               Some/directory/some_other_script.sh
@@ -80,12 +93,10 @@
      \"Some/directory\")
    => creates Some/directory/hello_world.sh
               Some/directory/some_other_script.sh"
-
-  ([context-path dir]
+  ([resource-path dir]
      (copy-resources!
-      (map #(str (parent-path context-path) %)
-           (list-resources (parent-url context-path)))
-      (parent-path context-path)
+      (list-resources-under-path resource-path)
+      resource-path
       dir))
   ([resources relative-to dir]
      (fs/mkdirs dir)
@@ -114,7 +125,7 @@
   [script-path & args]
   (let [tmp-dir (fs/temp-dir "hermit")
         script  (fs/file tmp-dir (script-file script-path))]
-    (copy-resources! script-path tmp-dir)
+    (copy-resources! (parent-path script-path) tmp-dir)
     (with-sh-dir tmp-dir
       (apply sh (.getAbsolutePath script) args))))
 

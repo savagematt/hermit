@@ -6,17 +6,20 @@
             [midje.sweet :refer :all]))
 
 (fact "Support functions work"
-  (base-path "blah/something/whatever.sh") => "blah/something/"
+  (parent-path "blah/something/whatever.sh") => "blah/something/"
   (script-file "blah/something/whatever.sh") => "whatever.sh")
 
+(fact "Lists resources in given resource url"
+  (list-resources-under-url (io/resource "hermit/test"))  => (contains ["calls_hello_world.sh" "hello_world.sh"]
+                                                             :gaps-ok :in-any-order))
+
 (fact "Lists resources in given resource path"
-  (list-resources (io/resource "hermit/test"))
-  => (contains ["calls_hello_world.sh" "hello_world.sh"]
+  (list-resources-under-path "hermit/test")  => (contains ["hermit/test/calls_hello_world.sh" "hermit/test/hello_world.sh"]
                :gaps-ok :in-any-order))
 
 (fact "Throws a nice exception if a resource doesn't exist"
   (rsh! "not/there.sh")
-  => (throws NullPointerException "Resource 'not/there.sh' not found"))
+  => (throws NullPointerException "Resource 'not/' not found"))
 
 (fact "Copying resources works"
   (let [tmp-dir (fs/temp-dir "hermit-test")]
