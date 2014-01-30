@@ -129,10 +129,23 @@
     (with-sh-dir hermit-dir
       (apply sh (.getAbsolutePath script) args))))
 
-(defmacro with-deps [resource-paths & body]
+(defn dependency-output
+  [output dir]
+  (if (sequential? output)
+    [(first output) (fs/file dir (second output))]
+    [output (fs/file dir output)]))
+
+
+(defmacro with-deps
+  "Unpacks resource-paths into the target hermit directory
+
+  Usage: (with-deps [\"namespace/one\" [\"namespace/two\" \"unpack/dir\"]
+            (rsh! \"some/package/script_depending_on_other_namespaces.sh\")"
+  [resource-paths & body]
   `(binding [*hermit-dir* (fs/temp-dir "hermit")]
-     (doseq [dependency-path# (list ~@resource-paths)]
-       (copy-resources! dependency-path# (fs/file *hermit-dir* dependency-path#)))
+     (doseq [dependency-output# (list ~@resource-paths)]
+       (let [[dependency-path# dependency-dir#] (dependency-output dependency-output# *hermit-dir*)]
+         (copy-resources! dependency-path# dependency-dir#)))
      (do ~@body))
   )
 

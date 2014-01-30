@@ -43,3 +43,7 @@
 
   (with-deps ["hermit/test/subdir1" "hermit/test/subdir2"]
     (rsh! "hermit/test/sub_dirs.sh")) => (contains {:out "Script in subdir1\nScript in subdir2\n"}))
+
+(fact "Can overload path dependencies are unpacked to"
+  (with-deps [["hermit/test/subdir1" "bin"]]
+    (rsh! "hermit/test/call_from_bin.sh")) => (contains {:out "Script in subdir1\n"}))
