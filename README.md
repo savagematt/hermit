@@ -11,7 +11,7 @@ Works from within the repl and within uberjars
 Add the following to the `:dependencies` section of your `project.clj` file:
 
 ```clj
-    [hermit "0.4"]
+    [savagematt/hermit "0.4"]
 ```
 
 ## Usage
