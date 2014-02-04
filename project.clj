@@ -6,6 +6,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
+  :min-lein-version "2.3.4"
+
   :main hermit.core
 
   :dependencies [[org.clojure/clojure "1.5.1"]
