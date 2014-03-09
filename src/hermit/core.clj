@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [me.raynes.fs :as fs]
-            [hermit.jars :refer :all])
+            [hermit.jars :refer :all]
+            [clojure.pprint :refer [pprint]])
   (:import [java.net URL URI])
   (:gen-class))
 
@@ -14,65 +15,61 @@
 (defn ensure-trailing-slash [s] (str/replace s #"[^/]$" #(str %1 "/")))
 
 (defn parent-url
-  "For jar resources,  hermit/hello_world.sh => jar:file:/Path/to/jar!hermit/
-   For file resources, hermit/hello_world.sh =>     file:/Path/to/project/src/hermit/"
-  [resource-path]
-  (let [resource-url (io/resource resource-path)]
-
-    (when-not resource-url
-      (throw (NullPointerException. (str "Resource '" resource-path "' not found"))))
-
-    (case (.getProtocol resource-url)
-      "jar"  (parent-jar-url resource-url)
-      "file" (.toURL (.resolve (.toURI resource-url) ".")))))
+  "For jar resources,  hermit/helloworld/hello_world.sh => jar:file:/Path/to/jar!hermit/helloworld/
+   For file resources, hermit/helloworld/hello_world.sh =>     file:/Path/to/project/src/hermit/helloworld/"
+  [url]
+  (case (.getProtocol url)
+    "jar"  (parent-jar-url url)
+    "file" (.toURL (.resolve (.toURI url) "."))))
 
 (defn parent-path
-  "hermit/hello_world.sh
-   => hermit/"
+  "hermit/helloworld/hello_world.sh
+   => hermit/helloworld/"
   [context-path]
   (str/replace context-path #"[^/]*$" ""))
 
 (defn script-file
-  "hermit/hello_world.sh
+  "hermit/helloworld/hello_world.sh
    => hello_world.sh"
   [context-path]
   (re-find #"[^/]*$" context-path))
 
-(defn list-dir-resources
+(defn dir-resources
   "Given a directory url, returns the paths of all files under that directory,
    relative to the directory.
 
-  file:/Path/to/project/src/hermit/
+  file:/Path/to/project/src/hermit/helloworld
   =>  a seq containing hello_world.sh"
   [url]
-  (let [base-file      (fs/file url)
-        base-file-path (str (str/re-quote-replacement (.getAbsolutePath base-file)) "/")]
+  (let [root-dir      (fs/file url)
+        root-dir-path (str (str/re-quote-replacement (.getAbsolutePath root-dir)) "/")]
+    (assert (fs/directory? root-dir) (str url "is not a directory"))
     (map
-     #(str/replace-first % base-file-path "")
-     (filter #(.isFile %) (file-seq base-file)))))
+     #(str/replace-first % root-dir-path "")
+     (filter #(.isFile %) (file-seq root-dir)))))
 
-(defn list-resources-under-url
+(defn resources-under-url
   "Given a url, returns all child resources within the same code source.
 
    jar:file:/Path/to/jar!hermit
    =>  a seq containing hello_world.sh"
   [url]
   (case (.getProtocol url)
-    "file" (list-dir-resources url)
-    "jar"  (list-jar-resources url)))
+    "file" (dir-resources url)
+    "jar"  (jar-resources url)))
 
-(defn list-resources-under-path
+(defn resources-in-parent-package
   "Given a resource path, returns all child resources within the same code source.
 
    hermit/
    =>  a seq containing hermit/hello_world.sh"
-  [resource-path]
-  (let [resource-url (io/resource (ensure-trailing-slash resource-path))]
+  [reference-resource-path]
+  (let [resource-url (io/resource reference-resource-path)]
     (when-not resource-url
-      (throw (NullPointerException. (str "Resource '" resource-path "' not found"))))
+      (throw (NullPointerException. (str "Resource '" reference-resource-path "' not found"))))
 
-    (map #(str (ensure-trailing-slash resource-path) %)
-         (list-resources-under-url resource-url))))
+    (map #(str (parent-path reference-resource-path) %)
+         (resources-under-url (parent-url resource-url)))))
 
 
 (defn copy-resources!
@@ -91,10 +88,10 @@
      \"Some/directory\")
    => creates Some/directory/hello_world.sh
               Some/directory/some_other_script.sh"
-  ([resource-path dir]
+  ([reference-resource-path dir]
      (copy-resources!
-      (list-resources-under-path resource-path)
-      resource-path
+      (resources-in-parent-package reference-resource-path)
+      (parent-path reference-resource-path)
       dir))
   ([resources relative-to dir]
      (fs/mkdirs dir)
@@ -125,7 +122,7 @@
   [script-path & args]
   (let [hermit-dir (if (thread-bound? #'*hermit-dir*) *hermit-dir* (fs/temp-dir "hermit"))
         script  (fs/file hermit-dir (script-file script-path))]
-    (copy-resources! (parent-path script-path) hermit-dir)
+    (copy-resources! script-path hermit-dir)
     (with-sh-dir hermit-dir
       (apply sh (.getAbsolutePath script) args))))
 
@@ -136,21 +133,23 @@
     [output (fs/file dir output)]))
 
 
-(defmacro with-deps
+(defmacro with-deps-in-package
   "Unpacks resource-paths into the target hermit directory
 
-  Usage: (with-deps [\"namespace/one\" [\"namespace/two\" \"unpack/dir\"]
+  Usage: (with-deps [\"package/one/reference_resource.sh\"
+                     [\"package/two/reference_resource.sh\" \"unpack/dir\"]]
             (rsh! \"some/package/script_depending_on_other_namespaces.sh\")"
-  [resource-paths & body]
+  [reference-resource-paths & body]
   `(binding [*hermit-dir* (fs/temp-dir "hermit")]
-     (doseq [dependency-output# (list ~@resource-paths)]
+     (doseq [dependency-output# (list ~@reference-resource-paths)]
        (let [[dependency-path# dependency-dir#] (dependency-output dependency-output# *hermit-dir*)]
          (copy-resources! dependency-path# dependency-dir#)))
      (do ~@body))
   )
 
 (defn -main [& args]
-  (with-deps [["hermit/" "bin"] "hermit"]
-    (println (apply rsh! "hermit/call_deps.sh" args)))
+  (println "If you executed the jar with a single argument \"Dave\", :out should be \"Hello Dave\"")
+  (with-deps-in-package [["hermit/helloworld/hello_world.sh" "aliased_helloworld"]]
+                        (println (rsh! "hermit/otherpackages/call_script_in_aliased_package.sh" "Dave")))
 
   (shutdown-agents))

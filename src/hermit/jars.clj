@@ -24,7 +24,7 @@
         in-jar-parent (.resolve (URI. in-jar-path) ".")]
     (URL. (str "jar:" jar-uri "!" in-jar-parent))))
 
-(defn list-jar-resources
+(defn jar-resources
   "jar:file:/Some/file.jar!/path/to/resource
    => (path/to/resource/file1.sh, path/to/resource/file2.sh)"
   [url]
