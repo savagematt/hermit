@@ -128,7 +128,6 @@
       (finally
         ; If this function was responsible for creating
         ; hermit-dir, we should also clean it up
-        (println hermit-dir)
         (when-not (thread-bound? #'*hermit-dir*)
           (fs/delete-dir hermit-dir))))))
 
