@@ -5,6 +5,14 @@
             [hermit.core :refer :all]
             [midje.sweet :refer :all]))
 
+(defmacro with-temp-dir
+  [[var prefix] & body]
+  `(let [~var (fs/temp-dir ~prefix)]
+     (try
+       (do ~@body)
+       (finally
+         (fs/delete-dir ~var)))))
+
 (fact "Support functions work"
   (parent-path "blah/something/whatever.sh") => "blah/something/"
   (script-file "blah/something/whatever.sh") => "whatever.sh"
@@ -25,7 +33,7 @@
   => (throws NullPointerException "Resource 'not/there.sh' not found"))
 
 (fact "Copying resources works"
-      (let [tmp-dir (fs/temp-dir "hermit-test")]
+      (with-temp-dir [tmp-dir "hermit-test"]
         (copy-resources!
           [ "hermit/test/calls_hello_world.sh" "hermit/test/hello_world.sh"]
           "hermit/test/"
@@ -35,7 +43,7 @@
                                            :gaps-ok :in-any-order)))
 
 (fact "Copying resources works"
-      (let [tmp-dir (fs/temp-dir "hermit-test")]
+      (with-temp-dir [tmp-dir "hermit-test"]
         (copy-resources!
           ["hermit/test/subdir1/sub_dir1.sh"]
           "hermit/test/"
@@ -66,3 +74,8 @@
 (fact "Can overload the path dependencies are unpacked to"
   (with-deps-in-package [["hermit/test/subdir1/sub_dir1.sh" "bin"]]
     (rsh! "hermit/test/call_from_bin.sh")) => (contains {:out "Script in subdir1\n"}))
+
+(fact "Can overload the path dependencies are unpacked to"
+      (with-deps-in-package [["hermit/test/subdir1/sub_dir1.sh" "bin"]]
+                            (rsh! "hermit/test/call_from_bin.sh")) => (contains {:out "Script in subdir1\n"}))
+

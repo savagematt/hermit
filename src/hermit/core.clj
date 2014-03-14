@@ -120,18 +120,23 @@
 
    The script with be run within the context of this temp directory"
   [script-path & args]
-  (let [hermit-dir (if (thread-bound? #'*hermit-dir*) *hermit-dir* (fs/temp-dir "hermit"))
-        script  (fs/file hermit-dir (script-file script-path))]
-    (copy-resources! script-path hermit-dir)
-    (with-sh-dir hermit-dir
-      (apply sh (.getAbsolutePath script) args))))
+  (let [hermit-dir (if (thread-bound? #'*hermit-dir*) *hermit-dir* (fs/temp-dir "hermit"))]
+    (try
+      (copy-resources! script-path hermit-dir)
+      (with-sh-dir hermit-dir
+                   (apply sh (.getAbsolutePath (fs/file hermit-dir (script-file script-path))) args))
+      (finally
+        ; If this function was responsible for creating
+        ; hermit-dir, we should also clean it up
+        (println hermit-dir)
+        (when-not (thread-bound? #'*hermit-dir*)
+          (fs/delete-dir hermit-dir))))))
 
 (defn dependency-output
   [output dir]
   (if (sequential? output)
     [(first output) (fs/file dir (second output))]
     [output (fs/file dir output)]))
-
 
 (defmacro with-deps-in-package
   "Unpacks resource-paths into the target hermit directory
@@ -140,11 +145,17 @@
                      [\"package/two/reference_resource.sh\" \"unpack/dir\"]]
             (rsh! \"some/package/script_depending_on_other_namespaces.sh\")"
   [reference-resource-paths & body]
-  `(binding [*hermit-dir* (fs/temp-dir "hermit")]
-     (doseq [dependency-output# (list ~@reference-resource-paths)]
-       (let [[dependency-path# dependency-dir#] (dependency-output dependency-output# *hermit-dir*)]
-         (copy-resources! dependency-path# dependency-dir#)))
-     (do ~@body))
+  `(let [should-create-hermit-dir# (not (thread-bound? #'*hermit-dir*))]
+      (binding [*hermit-dir* (if should-create-hermit-dir# (fs/temp-dir "hermit") *hermit-dir*)]
+         (try
+           (doseq [dependency-output# (list ~@reference-resource-paths)]
+             (let [[dependency-path# dependency-dir#] (dependency-output dependency-output# *hermit-dir*)]
+               (copy-resources! dependency-path# dependency-dir#)))
+           (do ~@body)
+
+           (finally
+             (when should-create-hermit-dir#
+               (fs/delete-dir *hermit-dir*))))))
   )
 
 (defn -main [& args]
