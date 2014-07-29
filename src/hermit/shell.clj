@@ -21,10 +21,10 @@
                   :else (fn [] (conch/exit-code process)))
         result (cond
                  timeout (future (out-fn))
-                 :else (out-fn))
+                 :else (atom (out-fn)))
         exit-code (exit-fn)]
 
-    {:out result :exit exit-code}))
+    {:out @result :exit exit-code}))
 
 (defmacro with-sh-dir [dir & body]
   `(binding [*sh-dir* ~dir]

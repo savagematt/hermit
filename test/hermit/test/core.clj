@@ -69,12 +69,12 @@
 
 (fact "Passes through args with timeout"
       (let [result (with-sh-opts {:timeout 2000} (rsh! "hermit/test/echo_args.sh" "moo" "baa" "eeyore"))]
-        @(:out result) => (contains "moo baa eeyore\n")
+        (:out result) => (contains "moo baa eeyore\n")
         (:exit result) => 0))
 
 (fact "Passes through args with timeout expiry"
       (let [result (with-sh-opts {:timeout 50} (rsh! "hermit/test/slow_echo_args.sh" "moo" "baa" "eeyore"))]
-        @(:out result) => (is "slow\n")
+        (:out result) => (is "slow\n")
         (:exit result) => :timeout))
 
 (fact "Writes to a stream"
