@@ -1,5 +1,5 @@
 (ns hermit.core
-  (:require [clojure.java.shell :refer [sh with-sh-dir]]
+  (:require [hermit.shell :refer [sh with-sh-dir]]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [me.raynes.fs :as fs]
@@ -160,6 +160,6 @@
 (defn -main [& args]
   (println "If you executed the jar with a single argument \"Dave\", :out should be \"Hello Dave\"")
   (with-deps-in-package [["hermit/helloworld/hello_world.sh" "aliased_helloworld"]]
-                        (println (rsh! "hermit/otherpackages/call_script_in_aliased_package.sh" "Dave")))
+                        (println (apply rsh! "hermit/otherpackages/call_script_in_aliased_package.sh" args)))
 
   (shutdown-agents))
