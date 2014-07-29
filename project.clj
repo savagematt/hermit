@@ -1,4 +1,4 @@
-(defproject savagematt/hermit "0.8-SNAPSHOT"
+(defproject savagematt/hermit "0.9-SNAPSHOT"
   :description "Run command line scripts bundled within your clojure project "
 
   :url "https://github.com/savagematt/hermit"
